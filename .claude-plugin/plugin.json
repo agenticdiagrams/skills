@@ -1,0 +1,19 @@
+{
+  "name": "agentic-diagrams",
+  "description": "Author and validate .agentic.yaml files — the open schema for diagramming agentic systems (agents, tools, routers, guardrails, memory, flows, scenarios) at agenticdiagrams.com.",
+  "version": "0.1.0",
+  "author": {
+    "name": "agenticdiagrams"
+  },
+  "homepage": "https://agenticdiagrams.com",
+  "repository": "https://github.com/agenticdiagrams/skills",
+  "license": "MIT",
+  "keywords": [
+    "agentic",
+    "diagrams",
+    "yaml",
+    "agents",
+    "architecture",
+    "schema"
+  ]
+}
