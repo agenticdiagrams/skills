@@ -8,8 +8,15 @@ Currently ships one skill, `agentic-diagrams`, which teaches your coding agent t
 
 ### Claude Code (native plugin)
 
+Add to marketplace:
+
 ```
 /plugin marketplace add agenticdiagrams/skills
+```
+
+Then install the plugin:
+
+```
 /plugin install agentic-diagrams@agentic-diagrams
 ```
 
