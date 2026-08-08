@@ -1,0 +1,176 @@
+agentic: '0.1'
+
+diagram:
+  name: Guarded Multi-Agent Pipeline
+  description: Agent pipeline with input/output guardrails and human approval
+  active_scenario: safe-flow
+
+nodes:
+  input-guard:
+    type: guardrail
+    sub_type: input_filter
+    label: Input Validator
+
+  orchestrator:
+    type: agent
+    label: Orchestrator
+
+  research-agent:
+    type: agent
+    label: Research Agent
+
+  writer-agent:
+    type: agent
+    label: Content Writer
+
+  output-guard:
+    type: guardrail
+    sub_type: output_filter
+    label: Content Policy Filter
+
+  reviewer:
+    type: human
+    label: Human Reviewer
+
+  web-search:
+    type: tool
+    sub_type: api
+    label: Web Search API
+
+  vector-store:
+    type: memory
+    sub_type: vector
+    label: Research Memory
+
+  llm:
+    type: model
+    sub_type: llm
+    label: Claude Opus
+    provider: Anthropic
+
+  monitor:
+    type: observability
+    label: Trace Logger
+
+edges:
+  - from: input-guard
+    to: orchestrator
+    type: request
+
+  - from: orchestrator
+    to: research-agent
+    type: request
+
+  - from: orchestrator
+    to: writer-agent
+    type: request
+
+  - from: research-agent
+    to: web-search
+    type: request
+
+  - from: research-agent
+    to: vector-store
+    type: request
+
+  - from: writer-agent
+    to: llm
+    type: request
+
+  - from: writer-agent
+    to: output-guard
+    type: request
+
+  - from: output-guard
+    to: reviewer
+    type: request
+
+  - from: orchestrator
+    to: monitor
+    type: async
+
+scenarios:
+  safe-flow:
+    name: Safe Content Generation
+    steps:
+      - from: input-guard
+        to: orchestrator
+        type: call
+        label: Validated request
+        payload: '{"topic": "AI safety best practices"}'
+
+      - from: orchestrator
+        to: research-agent
+        type: call
+        label: Research this topic
+
+      - from: research-agent
+        to: web-search
+        type: call
+        label: Search recent papers
+
+      - from: web-search
+        to: research-agent
+        type: return
+        label: Search results
+
+      - from: research-agent
+        to: vector-store
+        type: call
+        label: Store findings
+
+      - from: research-agent
+        to: orchestrator
+        type: return
+        label: Research summary
+
+      - from: orchestrator
+        to: writer-agent
+        type: call
+        label: Draft article
+
+      - from: writer-agent
+        to: llm
+        type: call
+        label: Generate draft
+
+      - from: llm
+        to: writer-agent
+        type: return
+        label: Draft content
+
+      - from: writer-agent
+        to: output-guard
+        type: call
+        label: Check content policy
+        fragment:
+          type: alt
+          label: Policy check
+          position: start
+
+      - from: output-guard
+        to: reviewer
+        type: call
+        label: Approved - needs human review
+        fragment:
+          type: alt
+          position: else
+
+      - from: output-guard
+        to: writer-agent
+        type: error
+        label: Policy violation - rewrite needed
+        fragment:
+          type: alt
+          position: end
+
+  blocked-input:
+    name: Blocked by Input Guard
+    steps:
+      - from: input-guard
+        to: input-guard
+        type: error
+        label: Request rejected
+        note:
+          text: Harmful content detected
+          position: over

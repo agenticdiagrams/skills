@@ -1,0 +1,55 @@
+agentic: '0.1'
+diagram:
+  name: Simple Support Bot
+
+nodes:
+  customer:
+    type: user
+    edges:
+      - to: support-bot
+
+  support-bot:
+    type: agent
+    edges:
+      - to: claude-sonnet
+        animated: true
+      - to: kb-search
+
+  kb-search:
+    type: tool
+    sub_type: mcp
+
+  claude-sonnet:
+    type: model
+    provider: Anthropic
+
+scenarios:
+  happy-path:
+    name: Successful Query
+    steps:
+      - from: customer
+        to: support-bot
+        label: How do I reset my password?
+
+      - from: support-bot
+        to: kb-search
+        label: Search for password reset
+
+      - from: kb-search
+        to: support-bot
+        type: return
+        label: Found 3 articles
+
+      - from: support-bot
+        to: claude-sonnet
+        label: Summarise for user
+
+      - from: claude-sonnet
+        to: support-bot
+        type: return
+        label: Generated answer
+
+      - from: support-bot
+        to: customer
+        type: return
+        label: Here's how to reset your password...

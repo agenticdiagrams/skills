@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agenticdiagrams.com/schemas/agentic/0.1.json",
+  "title": "Agentic Diagram",
+  "description": "Schema for .agentic.yaml diagram files (spec v0.1)",
+  "type": "object",
+  "required": ["agentic"],
+  "additionalProperties": false,
+  "properties": {
+    "agentic": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Spec version"
+    },
+    "diagram": { "$ref": "#/$defs/diagram" },
+    "nodes": {
+      "type": "object",
+      "description": "Node definitions keyed by stable id",
+      "additionalProperties": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Connections between nodes (type defaults to request)",
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "scenarios": {
+      "type": "object",
+      "description": "Flow definitions keyed by id",
+      "additionalProperties": { "$ref": "#/$defs/scenario" }
+    },
+    "layout": { "$ref": "#/$defs/layout" }
+  },
+  "$defs": {
+    "diagram": {
+      "type": "object",
+      "description": "Diagram metadata. All fields optional, name defaults to Untitled",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "default": "Untitled" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["system", "component"] },
+        "active_scenario": { "type": "string" },
+        "parent_diagram": {
+          "type": "string",
+          "description": "Parent diagram id for drill-down hierarchy"
+        },
+        "created": { "type": "string", "format": "date-time" },
+        "updated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "nodeType": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "tool",
+        "component",
+        "backend",
+        "generic",
+        "note",
+        "system",
+        "memory",
+        "gateway",
+        "skill",
+        "channel",
+        "waypoint",
+        "router",
+        "human",
+        "trigger",
+        "guardrail",
+        "model",
+        "aggregator",
+        "observability",
+        "group",
+        "block",
+        "image",
+        "prompt",
+        "user",
+        "output",
+        "knowledge_base",
+        "environment",
+        "text_label",
+        "divider"
+      ]
+    },
+    "node": {
+      "type": "object",
+      "description": "Node definition. Label defaults to the node id when omitted",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/$defs/nodeType" },
+        "label": { "type": "string", "description": "Display name (defaults to node id)" },
+        "sub_title": { "type": "string", "description": "Secondary display text below label" },
+        "description": { "type": "string" },
+        "sub_type": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "group": { "type": "string", "description": "Parent group node id" },
+        "linked_diagram": {
+          "type": "string",
+          "description": "Drill-down target diagram id or file path"
+        },
+        "is_looping": { "type": "boolean" },
+        "auth": { "type": "string" },
+        "auth_detail": { "type": "string" },
+        "provider": { "type": "string" },
+        "content": { "type": "string" },
+        "example_response": { "type": "string" },
+        "ttl": {
+          "type": "string",
+          "description": "Retention lifetime. Primarily for memory nodes. Preset values: session, 24h, permanent. Freeform strings (e.g. 7d) are accepted."
+        },
+        "scope": {
+          "type": "string",
+          "description": "Audience scope. Primarily for memory nodes. Preset values: per-user, per-session, global. Freeform strings accepted."
+        },
+        "edges": {
+          "type": "array",
+          "description": "Inline edge definitions (from is inferred as this node)",
+          "items": { "$ref": "#/$defs/inlineEdge" }
+        }
+      }
+    },
+    "edgeType": {
+      "type": "string",
+      "description": "Edge semantic type. Defaults to request when omitted",
+      "enum": ["default", "request", "response", "async", "streaming", "event", "error"]
+    },
+    "pathType": {
+      "type": "string",
+      "enum": ["bezier", "straight", "step", "smooth_step", "simple_bezier"]
+    },
+    "handlePosition": {
+      "type": "string",
+      "pattern": "^(?:top|right|bottom|left)(?:-\\d+(?:-t)?)?$",
+      "description": "Connection point on a node. Plain side name ('bottom') connects at the centre; slot form ('bottom-20') places the anchor at 20 % along that side; '-t' suffix marks a target slot ('top-80-t')."
+    },
+    "edgeMetadata": {
+      "type": "object",
+      "description": "Freeform presentation hints for an edge (editor cosmetics). Known keys are typed; unknown keys are allowed.",
+      "additionalProperties": true,
+      "properties": {
+        "label_pos": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Label position along the edge as a fraction of its length (0 = source end, 1 = target end). Defaults to 0.5."
+        }
+      }
+    },
+    "edgeArrows": {
+      "enum": ["none", "start", "end", "both"],
+      "description": "Which ends of an edge show an arrowhead: none, start (source), end (target), or both. Defaults to 'end'."
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "description": "Source node id" },
+        "to": { "type": "string", "description": "Target node id" },
+        "type": { "$ref": "#/$defs/edgeType" },
+        "label": { "type": "string" },
+        "condition": {
+          "type": "string",
+          "description": "Branch condition expression, e.g. 'approved', 'score > 0.8', 'default'"
+        },
+        "animated": { "type": "boolean", "description": "Show animated flow on connection" },
+        "arrows": { "$ref": "#/$defs/edgeArrows" },
+        "path": { "$ref": "#/$defs/pathType" },
+        "source_handle": { "$ref": "#/$defs/handlePosition" },
+        "target_handle": { "$ref": "#/$defs/handlePosition" },
+        "metadata": { "$ref": "#/$defs/edgeMetadata" }
+      }
+    },
+    "inlineEdge": {
+      "type": "object",
+      "description": "Edge defined on a node (from is inferred as the parent node id)",
+      "required": ["to"],
+      "additionalProperties": false,
+      "properties": {
+        "to": { "type": "string", "description": "Target node id" },
+        "type": { "$ref": "#/$defs/edgeType" },
+        "label": { "type": "string" },
+        "condition": {
+          "type": "string",
+          "description": "Branch condition expression, e.g. 'approved', 'score > 0.8', 'default'"
+        },
+        "animated": { "type": "boolean", "description": "Show animated flow on connection" },
+        "arrows": { "$ref": "#/$defs/edgeArrows" },
+        "path": { "$ref": "#/$defs/pathType" },
+        "source_handle": { "$ref": "#/$defs/handlePosition" },
+        "target_handle": { "$ref": "#/$defs/handlePosition" },
+        "metadata": { "$ref": "#/$defs/edgeMetadata" }
+      }
+    },
+    "stepType": {
+      "type": "string",
+      "description": "Step semantic type. Defaults to call when omitted",
+      "enum": ["call", "return", "async", "event", "error"]
+    },
+    "fragmentType": {
+      "type": "string",
+      "enum": ["alt", "opt", "loop", "par"]
+    },
+    "fragment": {
+      "type": "object",
+      "required": ["type", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/$defs/fragmentType" },
+        "label": { "type": "string" },
+        "position": { "type": "string", "enum": ["start", "else", "end"] }
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["text", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string" },
+        "position": { "type": "string", "enum": ["left", "right", "over"] }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "description": "Source node id" },
+        "to": { "type": "string", "description": "Target node id" },
+        "type": { "$ref": "#/$defs/stepType" },
+        "label": { "type": "string" },
+        "payload": { "type": "string" },
+        "duration": { "type": "number", "minimum": 0 },
+        "fragment": { "$ref": "#/$defs/fragment" },
+        "note": { "$ref": "#/$defs/note" }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        }
+      }
+    },
+    "point2d": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "size2d": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "viewport": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "[x, y, zoom]"
+    },
+    "nodeStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "borderless": { "type": "boolean" },
+        "icon_url": { "type": "string", "format": "uri" },
+        "icon_layout": { "type": "string", "enum": ["left", "right", "top", "bottom"] },
+        "image_url": { "type": "string", "format": "uri" }
+      }
+    },
+    "direction": {
+      "type": "string",
+      "description": "Auto-layout flow direction. Defaults to TB",
+      "enum": ["TB", "LR", "BT", "RL"]
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "$ref": "#/$defs/direction" },
+        "viewport": { "$ref": "#/$defs/viewport" },
+        "positions": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/point2d" }
+        },
+        "sizes": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/size2d" }
+        },
+        "node_styles": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/nodeStyle" }
+        }
+      }
+    }
+  }
+}

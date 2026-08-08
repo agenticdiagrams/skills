@@ -2,7 +2,7 @@
 
 Agent skills for [agenticdiagrams.com](https://agenticdiagrams.com) — the open schema for diagramming agentic systems (agents, tools, routers, guardrails, memory, flows, scenarios).
 
-Currently ships one skill, `agentic-diagrams`, which teaches your coding agent to author and validate `.agentic.yaml` files. The skill always fetches the live spec from agenticdiagrams.com before authoring, then validates the output with `@agenticdiagrams/schema` so every diagram is guaranteed to parse.
+Currently ships one skill, `agentic-diagrams`, which teaches your coding agent to author and validate `.agentic.yaml` files. The skill is fully self-contained: it bundles the spec, the JSON Schema, and worked examples, so the agent can author and validate offline — no network fetches, no package installs. Works in any AI harness that supports the Agent Skills format (Claude Code, Cursor, Codex, Windsurf, Gemini CLI, …).
 
 ## Install
 
@@ -51,13 +51,19 @@ The skill activates automatically. The output lands as a `.agentic.yaml` file yo
 │   └── plugin.json          # Claude Code plugin manifest
 └── skills/
     └── agentic-diagrams/
-        └── SKILL.md         # canonical skill — discovered by both install paths
+        ├── SKILL.md         # canonical skill — discovered by both install paths
+        └── references/
+            ├── spec.md                  # full human-readable spec (vendored)
+            ├── agentic.schema.json      # machine-readable JSON Schema (vendored)
+            └── examples/                # worked .agentic.yaml examples (vendored)
 ```
 
-One canonical `SKILL.md` serves both distribution channels:
+One canonical skill directory serves both distribution channels:
 
 - Claude Code finds it via the plugin manifest (default `skills/` directory).
 - The Vercel `skills` CLI finds it via the repo root's `skills/` directory (and also honors `.claude-plugin/marketplace.json`).
+
+The `references/` files are vendored byte-for-byte from [agenticdiagrams/schema](https://github.com/agenticdiagrams/schema) (currently `@agenticdiagrams/schema` v0.1.5) at release time, so the skill never needs to fetch the live spec. When the schema releases a new version, the vendored copies here are refreshed in the same cycle.
 
 ## License
 
