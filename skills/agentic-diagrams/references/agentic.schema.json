@@ -91,6 +91,10 @@
         "type": { "$ref": "#/$defs/nodeType" },
         "label": { "type": "string", "description": "Display name (defaults to node id)" },
         "sub_title": { "type": "string", "description": "Secondary display text below label" },
+        "badge": {
+          "type": "string",
+          "description": "Short tag shown on the node, e.g. NEW or beta"
+        },
         "description": { "type": "string" },
         "sub_type": { "type": "string" },
         "url": { "type": "string", "format": "uri" },
@@ -103,8 +107,20 @@
         "auth": { "type": "string" },
         "auth_detail": { "type": "string" },
         "provider": { "type": "string" },
+        "model": {
+          "type": "string",
+          "description": "Model identifier, e.g. claude-sonnet-4-6. Primarily for agent and model nodes."
+        },
         "content": { "type": "string" },
         "example_response": { "type": "string" },
+        "input_schema": {
+          "type": "string",
+          "description": "Input schema, usually JSON Schema serialised as a string. Primarily for tool nodes."
+        },
+        "output_schema": {
+          "type": "string",
+          "description": "Output schema, usually JSON Schema serialised as a string. Primarily for tool nodes."
+        },
         "ttl": {
           "type": "string",
           "description": "Retention lifetime. Primarily for memory nodes. Preset values: session, 24h, permanent. Freeform strings (e.g. 7d) are accepted."
@@ -113,6 +129,7 @@
           "type": "string",
           "description": "Audience scope. Primarily for memory nodes. Preset values: per-user, per-session, global. Freeform strings accepted."
         },
+        "metadata": { "$ref": "#/$defs/nodeMetadata" },
         "edges": {
           "type": "array",
           "description": "Inline edge definitions (from is inferred as this node)",
@@ -120,10 +137,29 @@
         }
       }
     },
+    "nodeMetadata": {
+      "type": "object",
+      "description": "Freeform node properties the spec does not model, such as extra typed fields or editor hints. Values are strings, numbers or booleans.",
+      "additionalProperties": {
+        "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }]
+      }
+    },
     "edgeType": {
       "type": "string",
-      "description": "Edge semantic type. Defaults to request when omitted",
-      "enum": ["default", "request", "response", "async", "streaming", "event", "error"]
+      "description": "Edge semantic type. Defaults to request when omitted. data, control, stream and tool are the connection kinds of the current editor; stream is equivalent to streaming.",
+      "enum": [
+        "default",
+        "request",
+        "response",
+        "async",
+        "streaming",
+        "event",
+        "error",
+        "data",
+        "control",
+        "stream",
+        "tool"
+      ]
     },
     "pathType": {
       "type": "string",
@@ -132,7 +168,7 @@
     "handlePosition": {
       "type": "string",
       "pattern": "^(?:top|right|bottom|left)(?:-\\d+(?:-t)?)?$",
-      "description": "Connection point on a node. Plain side name ('bottom') connects at the centre; slot form ('bottom-20') places the anchor at 20 % along that side; '-t' suffix marks a target slot ('top-80-t')."
+      "description": "Connection point on a node. Plain side name ('bottom') connects at the centre; slot form ('bottom-20') places the anchor at that whole-number percentage (0-100) along that side; '-t' suffix marks a target slot ('top-80-t'). Omit it to let the renderer choose the connection point."
     },
     "edgeMetadata": {
       "type": "object",
@@ -223,11 +259,25 @@
     },
     "step": {
       "type": "object",
-      "required": ["from", "to"],
+      "description": "A playback step: either a from/to pair (a message between two nodes) or a nodes list (nodes highlighted together), never both.",
       "additionalProperties": false,
+      "oneOf": [
+        { "required": ["from", "to"], "not": { "required": ["nodes"] } },
+        {
+          "required": ["nodes"],
+          "not": { "anyOf": [{ "required": ["from"] }, { "required": ["to"] }] }
+        }
+      ],
       "properties": {
         "from": { "type": "string", "description": "Source node id" },
         "to": { "type": "string", "description": "Target node id" },
+        "nodes": {
+          "type": "array",
+          "description": "Node ids highlighted together at this step. Use instead of from/to when a step involves one node, or more than two.",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
         "type": { "$ref": "#/$defs/stepType" },
         "label": { "type": "string" },
         "payload": { "type": "string" },
@@ -257,8 +307,9 @@
     },
     "size2d": {
       "type": "array",
+      "description": "[width, height], or [width] alone to let the node's height follow its content",
       "items": { "type": "number", "minimum": 0 },
-      "minItems": 2,
+      "minItems": 1,
       "maxItems": 2
     },
     "viewport": {

@@ -63,7 +63,7 @@ One canonical skill directory serves both distribution channels:
 - Claude Code finds it via the plugin manifest (default `skills/` directory).
 - The Vercel `skills` CLI finds it via the repo root's `skills/` directory (and also honors `.claude-plugin/marketplace.json`).
 
-The `references/` files are vendored byte-for-byte from [agenticdiagrams/schema](https://github.com/agenticdiagrams/schema) (currently `@agenticdiagrams/schema` v0.1.5) at release time, so the skill never needs to fetch the live spec. When the schema releases a new version, the vendored copies here are refreshed in the same cycle.
+The `references/` files are vendored byte-for-byte from [agenticdiagrams/schema](https://github.com/agenticdiagrams/schema) (currently `@agenticdiagrams/schema` v0.1.7) at release time, so the skill never needs to fetch the live spec. When the schema releases a new version, the vendored copies here are refreshed in the same cycle.
 
 ## License
 
