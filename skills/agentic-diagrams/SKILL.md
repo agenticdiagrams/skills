@@ -20,7 +20,7 @@ Read these files from the skill's own directory (paths relative to this SKILL.md
 | `references/examples/simple-agent.agentic.yaml` | A small complete example (agent + tool + model + scenario) |
 | `references/examples/multi-agent-with-guardrails.agentic.yaml` | A larger example (multi-agent, guardrails, groups) |
 
-Bundled spec version: **0.1** (vendored from `@agenticdiagrams/schema` v0.1.5). Before authoring or validating, read `references/spec.md` — do not work from memory of other diagram formats, and do not invent node types, edge types, or field names that are not in the bundled spec.
+Bundled spec version: **0.1** (vendored from `@agenticdiagrams/schema` v0.1.7). Before authoring or validating, read `references/spec.md` — do not work from memory of other diagram formats, and do not invent node types, edge types, or field names that are not in the bundled spec.
 
 ## Authoring workflow
 
@@ -96,11 +96,11 @@ Validate by checking the YAML against `references/agentic.schema.json` yourself 
 4. **Enums generally:** edge `type`, step `type`, `path`, `arrows`, `fragment.type`/`position`, `note.position`, `layout.direction`, `diagram.type` all have closed enum values in the schema.
 5. **References resolve** — the JSON Schema *cannot* check these; verify them explicitly:
    - Every edge `to` (and top-level `from`) names an existing node id
-   - Every scenario step's `from` and `to` name existing node ids
+   - Every scenario step's `from` and `to`, or every id in its `nodes` list, names an existing node id
    - Every node `group:` names an existing container node (usually type `group`)
    - `diagram.active_scenario` names an existing scenario id
 6. **Handles:** `source_handle`/`target_handle` match the pattern `^(top|right|bottom|left)(-\d+(-t)?)?$` (e.g. `bottom`, `bottom-20`, `top-80-t`). Preserve any `-t` suffixes when editing an existing file.
-7. **Shapes:** `nodes` and `scenarios` are maps keyed by id; `edges` and `steps` are arrays. Layout `positions`/`sizes` values are 2-number arrays, `viewport` is `[x, y, zoom]`.
+7. **Shapes:** `nodes` and `scenarios` are maps keyed by id; `edges` and `steps` are arrays. Each step is either a `from`/`to` pair (a message) or a `nodes` list (nodes highlighted together: at least one id, no duplicates), never both. Layout `positions` values are `[x, y]`, `sizes` values are `[width, height]` or `[width]` alone, and `viewport` is `[x, y, zoom]`.
 
 Report each problem with its YAML path (e.g. `nodes.support-agent.type`), the approximate line, and a concrete fix drawn from the spec. Re-check after fixing until the document is clean.
 
@@ -120,7 +120,7 @@ The live spec and schema are published at `https://agenticdiagrams.com/docs/spec
 
 ## Do not
 
-- Do not invent node types, edge types, `sub_type` values, or field names. If the user's concept does not fit the spec, name the closest existing type and flag the mismatch.
+- Do not invent node types, edge types, `sub_type` values, or field names. If the user's concept does not fit the spec, name the closest existing type and flag the mismatch. A node property the spec doesn't model goes under that node's `metadata` (string, number or boolean values), never as a new top-level key.
 - Do not fetch anything from the network or install any package to author or validate — the bundled references are sufficient and authoritative for spec 0.1.
 - Do not skip validation after authoring. Always run the validation checklist before handing the file back.
 - Do not rename or reshape the user's existing file silently when fixing errors. Explain each change.

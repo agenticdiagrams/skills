@@ -84,11 +84,13 @@ nodes:
 | `type`           | string | yes      | Node type (see list below)             |
 | `label`          | string | no       | Display name (defaults to node id)     |
 | `sub_title`      | string | no       | Secondary display text below label     |
+| `badge`          | string | no       | Short tag shown on the node (`NEW`)    |
 | `description`    | string | no       | Longer description text                |
 | `sub_type`       | string | no       | Type-specific variant                  |
 | `url`            | string | no       | External link                          |
 | `group`          | string | no       | Parent group node id                   |
 | `linked_diagram` | string | no       | Drill-down target (diagram id or path) |
+| `metadata`       | object | no       | Freeform extra properties (see below)  |
 | `edges`          | array  | no       | Inline edge definitions (see below)    |
 
 ### Type-specific properties
@@ -101,8 +103,11 @@ These properties are meaningful for specific node types but accepted on any node
 | `auth`             | string  | agent, backend           | Auth mechanism (OAuth, JWT, etc)                                       |
 | `auth_detail`      | string  | agent, backend           | Auth subtitle/detail                                                   |
 | `provider`         | string  | model                    | Model provider (OpenAI, etc)                                           |
+| `model`            | string  | agent, model             | Model identifier (e.g. `claude-sonnet-4-6`)                            |
 | `content`          | string  | prompt, note, text_label | Text content                                                           |
 | `example_response` | string  | agent                    | Example agent response                                                 |
+| `input_schema`     | string  | tool                     | Input schema, usually JSON Schema serialised as a string               |
+| `output_schema`    | string  | tool                     | Output schema, usually JSON Schema serialised as a string              |
 | `ttl`              | string  | memory                   | Retention lifetime (e.g. `session`, `24h`, `permanent`, or freeform)   |
 | `scope`            | string  | memory                   | Audience scope (e.g. `per-user`, `per-session`, `global`, or freeform) |
 
@@ -133,6 +138,23 @@ nodes:
 Preset `ttl` values: `session`, `24h`, `permanent`. Any freeform string (e.g. `7d`, `30m`, `1y`) is also valid.
 
 Preset `scope` values: `per-user`, `per-session`, `global`. Any freeform string (e.g. `per-team`, `per-org`) is also valid.
+
+### Node metadata
+
+`metadata` holds properties the spec does not model, such as an extra typed field or an editor hint, so a diagram can round-trip through a file without losing them. Keys are freeform; values must be strings, numbers or booleans.
+
+```yaml
+nodes:
+  billing-api:
+    type: tool
+    sub_type: api
+    metadata:
+      region: eu-west-1
+      rate_limit: 100
+      deprecated: false
+```
+
+Prefer a first-class property when one exists (`model`, not `metadata.model`). Readers should keep metadata they don't understand rather than drop it.
 
 ### Node types
 
@@ -249,15 +271,21 @@ edges:
 
 ### Edge types
 
-| Type        | Meaning                       |
-| ----------- | ----------------------------- |
-| `request`   | Synchronous request (default) |
-| `response`  | Response to a request         |
-| `async`     | Asynchronous message          |
-| `streaming` | Streaming data flow           |
-| `event`     | Event-driven trigger          |
-| `error`     | Error / exception path        |
-| `default`   | Generic untyped connection    |
+| Type        | Meaning                                   |
+| ----------- | ----------------------------------------- |
+| `request`   | Synchronous request (default)             |
+| `response`  | Response to a request                     |
+| `async`     | Asynchronous message                      |
+| `streaming` | Streaming data flow                       |
+| `event`     | Event-driven trigger                      |
+| `error`     | Error / exception path                    |
+| `default`   | Generic untyped connection                |
+| `data`      | Data flowing between nodes                |
+| `control`   | Control / orchestration signal            |
+| `stream`    | Streaming data flow (same as `streaming`) |
+| `tool`      | Tool call                                 |
+
+`data`, `control`, `stream` and `tool` are the connection kinds used by the current Agentic Diagrams editor, which writes them on export. Both sets are valid in any file.
 
 ### Path types
 
@@ -280,16 +308,16 @@ source_handle: bottom
 target_handle: top
 ```
 
-**Slot form** — places the anchor at a specific percentage along the side, in 10 % increments (10–90):
+**Slot form** — places the anchor at a whole-number percentage (0–100) along the side, measured from the left of a horizontal side or the top of a vertical one:
 
 ```yaml
 source_handle: bottom-20 # 20 % from the left edge of the bottom side
 target_handle: top-80-t # 80 % from the left edge of the top side (-t marks a target slot)
 ```
 
-The `-t` suffix distinguishes target slots from source slots when both are present on the same side. It is added automatically by the editor on export and must be preserved when hand-editing.
+The `-t` suffix distinguishes target slots from source slots when both are present on the same side. It is added automatically by the editor on export and must be preserved when hand-editing. The classic editor only has anchors every 10 % (10–90) and snaps other values to the nearest one; the current editor places the anchor exactly.
 
-When handles are omitted, the editor uses direction-aware defaults (`bottom`/`top` for TB, `right`/`left` for LR, etc.).
+When handles are omitted, the renderer chooses the connection points from the two nodes' positions, guided by `direction` (for example `bottom`/`top` for TB, `right`/`left` for LR).
 
 ## Scenarios
 
@@ -322,14 +350,30 @@ scenarios:
 
 | Property   | Type   | Required | Default | Description                                            |
 | ---------- | ------ | -------- | ------- | ------------------------------------------------------ |
-| `from`     | string | yes      | —       | Source node id                                         |
-| `to`       | string | yes      | —       | Target node id                                         |
+| `from`     | string | yes\*    | —       | Source node id                                         |
+| `to`       | string | yes\*    | —       | Target node id                                         |
+| `nodes`    | array  | yes\*    | —       | Node ids highlighted together (see below)              |
 | `type`     | string | no       | `call`  | Step type: `call`, `return`, `async`, `event`, `error` |
 | `label`    | string | no       | —       | Short label shown during playback                      |
 | `payload`  | string | no       | —       | Detail data shown in panel                             |
 | `duration` | number | no       | —       | Custom playback duration (ms)                          |
 | `fragment` | object | no       | —       | Sequence diagram fragment                              |
 | `note`     | object | no       | —       | Sequence diagram note                                  |
+
+\*A step is either a message between two nodes (`from` and `to`) or a set of nodes highlighted together (`nodes`), never both. Use `nodes` for a step that involves one node, or more than two:
+
+```yaml
+steps:
+  - nodes: [chef] # one node: the chef starts the flow
+    label: Plan the menu
+  - from: chef
+    to: orchestrator
+    label: What can we cook?
+  - nodes: [orchestrator, inventory-agent, recipe-agent] # a fan-out, all at once
+    label: Check stock and recipes in parallel
+```
+
+`nodes` must list at least one id, with no duplicates.
 
 ### Fragment
 
@@ -392,6 +436,7 @@ layout:
     inventory-agent: [100, 200]
   sizes:
     orchestrator: [240, 117]
+    inventory-agent: [320] # width only: height follows the content
   node_styles:
     orchestrator:
       borderless: true
@@ -401,13 +446,13 @@ layout:
 
 ### Layout properties
 
-| Property      | Type   | Default | Description                                     |
-| ------------- | ------ | ------- | ----------------------------------------------- |
-| `direction`   | string | `TB`    | Auto-layout flow: `TB`, `LR`, `BT`, `RL`        |
-| `viewport`    | array  | —       | `[x, y, zoom]` — initial camera position        |
-| `positions`   | map    | —       | Node id → `[x, y]` coordinates                  |
-| `sizes`       | map    | —       | Node id → `[width, height]` measured dimensions |
-| `node_styles` | map    | —       | Node id → visual style overrides (see below)    |
+| Property      | Type   | Default | Description                                                           |
+| ------------- | ------ | ------- | --------------------------------------------------------------------- |
+| `direction`   | string | `TB`    | Auto-layout flow: `TB`, `LR`, `BT`, `RL`                              |
+| `viewport`    | array  | —       | `[x, y, zoom]` — initial camera position                              |
+| `positions`   | map    | —       | Node id → `[x, y]` coordinates                                        |
+| `sizes`       | map    | —       | Node id → `[width, height]`, or `[width]` when height follows content |
+| `node_styles` | map    | —       | Node id → visual style overrides (see below)                          |
 
 ### Direction values
 
@@ -466,6 +511,9 @@ Property name mapping:
 | `auth_detail`      | `authSubTitle`                                  |
 | `provider`         | `modelProvider`                                 |
 | `example_response` | `exampleResponse`                               |
+| `input_schema`     | `inputSchema`                                   |
+| `output_schema`    | `outputSchema`                                  |
+| `metadata`         | other node properties, key for key              |
 | `linked_diagram`   | `linkedDiagramId`                               |
 | `ttl`              | `memoryTtl`                                     |
 | `scope`            | `memoryScope`                                   |
@@ -476,18 +524,19 @@ Property name mapping:
 
 Edge type bidirectional mapping:
 
-| YAML        | Internal  | Notes                                               |
-| ----------- | --------- | --------------------------------------------------- |
-| _(omitted)_ | `request` | YAML omitted → imports as `request`                 |
-| `default`   | `default` | Distinct style (grey/no arrow), preserved on export |
-| `request`   | `request` | Same on both sides                                  |
+| YAML        | Internal  | Notes                                                 |
+| ----------- | --------- | ----------------------------------------------------- |
+| _(omitted)_ | `request` | YAML omitted → imports as `request`                   |
+| `default`   | `default` | Distinct style (grey/no arrow), preserved on export   |
+| `request`   | `request` | Same on both sides                                    |
+| `data`      | `data`    | Same on both sides (also `control`, `stream`, `tool`) |
 
 Path type bidirectional mapping:
 
-| YAML            | Internal       |
-| --------------- | -------------- |
-| `smooth_step`   | `smoothStep`   |
-| `simple_bezier` | `simpleBezier` |
-| `bezier`        | `bezier`       |
-| `straight`      | `straight`     |
-| `step`          | `step`         |
+| YAML            | Internal                                    |
+| --------------- | ------------------------------------------- |
+| `smooth_step`   | `smoothStep`                                |
+| `simple_bezier` | `simpleBezier`                              |
+| `bezier`        | `bezier`                                    |
+| `straight`      | `straight`                                  |
+| `step`          | `step` (`orthogonal` in the current editor) |
